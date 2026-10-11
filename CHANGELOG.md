@@ -22,10 +22,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   out of the user function namespace. ([#18])
 - Compute each record storage size once instead of recomputing it per use, and
   saturate the size rather than overflowing on doubling chains. ([#16])
+- Keep the test fixtures from being converted to CRLF on a Windows checkout. A
+  new `.gitattributes` marks `.stdout` and `.stdin` fixtures as binary, and
+  `run_tests.ps1` normalizes a fixture it reads, so the exact output comparison
+  no longer fails on every program that writes a newline. ([4d11ab4])
 
 ### Changed
 
 - Fail the Windows CI test step when `run_tests.ps1` fails. ([#15])
+- Report why a Windows program test failed: whether it did not compile, timed
+  out, or which line of its output differs from the fixture. ([4d11ab4])
 
 ### Documentation
 
@@ -81,6 +87,7 @@ Releases before 1.14.0 are not covered here. See the
 [#17]: https://github.com/kriol-lang/kriol/pull/17
 [#18]: https://github.com/kriol-lang/kriol/pull/18
 [#19]: https://github.com/kriol-lang/kriol/pull/19
+[4d11ab4]: https://github.com/kriol-lang/kriol/commit/4d11ab414aeeec30c60071006d34fea38a44f020
 [1.16.1]: https://github.com/kriol-lang/kriol/compare/v1.16.0-alpha+build2...v1.16.1-alpha+build1
 [1.16.0]: https://github.com/kriol-lang/kriol/compare/v1.15.0-alpha+build1...v1.16.0-alpha+build2
 [1.15.0]: https://github.com/kriol-lang/kriol/compare/v1.14.0-alpha+build1...v1.15.0-alpha+build1
