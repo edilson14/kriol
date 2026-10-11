@@ -299,9 +299,9 @@ you spend time on it.
 
 ## Contributors
 
-Kriol is written and maintained by
+Kriol is currently maintained by
 [@anaximeno](https://github.com/anaximeno), with contributions from everyone
-below.
+below:
 
 <a href="https://github.com/kriol-lang/kriol/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=kriol-lang/kriol" alt="Contributors" />
