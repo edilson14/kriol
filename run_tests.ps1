@@ -20,13 +20,17 @@ New-Item -ItemType File $EmptyInput -Force | Out-Null
 $script:Passed = 0
 $script:Failed = @()
 
-function Write-Result([string] $Name, [bool] $Ok, [string] $Detail = '') {
+# $Detail is appended to the PASS/FAIL line
+function Write-Result([string] $Name, [bool] $Ok, [string] $Detail = '', [string] $Report = '') {
     if ($Ok) {
         Write-Host ("  {0,-44} PASS{1}" -f $Name, $Detail)
         $script:Passed++
     } else {
         Write-Host ("  {0,-44} FAIL{1}" -f $Name, $Detail)
         $script:Failed += $Name
+        if ($Report) {
+            foreach ($line in $Report.TrimEnd("`n") -split "`n") { Write-Host "      $line" }
+        }
     }
 }
 
@@ -48,7 +52,7 @@ function Get-KriolResult([string[]] $Arguments) {
     return [pscustomobject]@{ Ok = ($LASTEXITCODE -eq 0); Output = $output }
 }
 
-# Runs a program on a stdin file; the exit status and both outputs, or $null on timeout.
+# Runs a program on a stdin file; whether it timed out, the exit status and both outputs.
 function Invoke-Program([string] $Exe, [string] $Stdin) {
     $info = [Diagnostics.ProcessStartInfo]::new($Exe)
     $info.UseShellExecute = $false
@@ -72,10 +76,12 @@ function Invoke-Program([string] $Exe, [string] $Stdin) {
 
     if (-not $process.WaitForExit(5000)) {
         $process.Kill()
-        return $null
+        $process.WaitForExit()
+        return [pscustomobject]@{ TimedOut = $true; ExitCode = $null; Stdout = ''; Stderr = '' }
     }
     $process.WaitForExit()
     return [pscustomobject]@{
+        TimedOut = $false
         ExitCode = $process.ExitCode
         Stdout = $stdout.Result -replace "`r`n", "`n"
         Stderr = $stderr.Result
@@ -88,13 +94,43 @@ function Get-Directive([IO.FileInfo] $Source, [string] $Key) {
         Select-Object -First 1 | ForEach-Object { $_.Matches[0].Groups[1].Value }
 }
 
+# A fixture is read the way a program's output is read, with LF line endings.
+# Git may check one out with CRLF on Windows, and the comparison is exact.
+function Get-Fixture([string] $Path) {
+    return [IO.File]::ReadAllText($Path) -replace "`r`n", "`n"
+}
+
 # A '<source>.stdout' fixture is the exact output the program must write.
 function Test-Stdout([IO.FileInfo] $Source, [string] $Actual) {
     $fixture = "$($Source.FullName).stdout"
-    return -not (Test-Path $fixture) -or ([IO.File]::ReadAllText($fixture) -eq $Actual)
+    return -not (Test-Path $fixture) -or ((Get-Fixture $fixture) -eq $Actual)
 }
 
-# Compiles and runs a source on its stdin fixture; $null if it does not compile or times out.
+# Shows the characters that a report would otherwise not make visible.
+function Show-Line([string] $Text) {
+    return $Text -replace "`r", '\r' -replace "`t", '\t'
+}
+
+# The first few lines on which the output differs from the fixture.
+function Get-StdoutDiff([IO.FileInfo] $Source, [string] $Actual) {
+    $fixture = "$($Source.FullName).stdout"
+    if (-not (Test-Path $fixture)) { return '' }
+    $expected = Get-Fixture $fixture
+    if ($expected -eq $Actual) { return '' }
+
+    $want = $expected -split "`n"
+    $got = $Actual -split "`n"
+    $lines = @()
+    for ($i = 0; $i -lt [Math]::Max($want.Count, $got.Count) -and $lines.Count -lt 10; $i++) {
+        $w = if ($i -lt $want.Count) { "'$(Show-Line $want[$i])'" } else { 'no line' }
+        $g = if ($i -lt $got.Count) { "'$(Show-Line $got[$i])'" } else { 'no line' }
+        if ($w -ne $g) { $lines += "line $($i + 1): expected $w, got $g" }
+    }
+    return $lines -join "`n"
+}
+
+# Compiles a source and runs it on its stdin fixture. Reports whether it
+# compiled and the compiler output, so a failure can say which step went wrong.
 function Invoke-Source([IO.FileInfo] $Source) {
     $exe = Join-Path $Work 'program.exe'
     Remove-Item $exe -ErrorAction SilentlyContinue
@@ -102,26 +138,53 @@ function Invoke-Source([IO.FileInfo] $Source) {
     $fixture = "$($Source.FullName).stdin"
     $stdin = if (Test-Path $fixture) { $fixture } else { $EmptyInput }
 
-    if (-not (Invoke-Kriol @($Source.FullName, '-o', $exe))) { return $null }
-    return Invoke-Program $exe $stdin
+    $compile = Get-KriolResult @($Source.FullName, '-o', $exe)
+    if (-not $compile.Ok) {
+        return [pscustomobject]@{ Compiled = $false; Output = $compile.Output; Run = $null }
+    }
+    return [pscustomobject]@{ Compiled = $true; Output = ''; Run = (Invoke-Program $exe $stdin) }
+}
+
+# Why a program test failed: the compiler diagnostics, or the run's exit status,
+# what it wrote to stderr and how its output differs from the fixture.
+function Get-RunReport([IO.FileInfo] $Source, $Result) {
+    if (-not $Result.Compiled) { return "did not compile`n$($Result.Output)" }
+    if ($Result.Run.TimedOut) { return 'timed out after 5s' }
+
+    $parts = @("exit status $($Result.Run.ExitCode)")
+    if ($Result.Run.Stderr) {
+        $parts += ($Result.Run.Stderr -split "`r?`n" | Select-Object -First 10) -join "`n"
+    }
+    $diff = Get-StdoutDiff $Source $Result.Run.Stdout
+    if ($diff) { $parts += $diff }
+    return $parts -join "`n"
 }
 
 function Test-CompilesAndRuns([IO.FileInfo] $Source) {
-    $run = Invoke-Source $Source
-    $ok = $run -and $run.ExitCode -eq 0 -and (Test-Stdout $Source $run.Stdout)
-    Write-Result ([IO.Path]::GetRelativePath($Root, $Source.FullName)) $ok
+    $result = Invoke-Source $Source
+    $ok = $result.Compiled -and -not $result.Run.TimedOut -and
+        $result.Run.ExitCode -eq 0 -and (Test-Stdout $Source $result.Run.Stdout)
+    $name = [IO.Path]::GetRelativePath($Root, $Source.FullName)
+    Write-Result $name $ok '' $(if ($ok) { '' } else { Get-RunReport $Source $result })
 }
 
 # A program that must stop with a runtime error: a non-zero exit status (or the
 # '// exit:' one), the '// expect:' message on stderr, and only the expected output.
 function Test-StopsAsExpected([IO.FileInfo] $Source) {
-    $run = Invoke-Source $Source
+    $result = Invoke-Source $Source
+    $run = $result.Run
     $status = Get-Directive $Source 'exit'
     $message = Get-Directive $Source 'expect'
-    $ok = $run -and (Test-Stdout $Source $run.Stdout) -and
+    $ok = $result.Compiled -and -not $run.TimedOut -and (Test-Stdout $Source $run.Stdout) -and
         $(if ($status) { $run.ExitCode -eq [int] $status } else { $run.ExitCode -ne 0 }) -and
         (-not $message -or $run.Stderr.Contains($message))
-    Write-Result ([IO.Path]::GetRelativePath($Root, $Source.FullName)) $ok
+    $name = [IO.Path]::GetRelativePath($Root, $Source.FullName)
+    $report = if ($ok) { '' } else { Get-RunReport $Source $result }
+    if (-not $ok -and $message -and $result.Compiled -and -not $run.TimedOut -and
+        -not $run.Stderr.Contains($message)) {
+        $report = "$report`nexpected on stderr: $message"
+    }
+    Write-Result $name $ok '' $report
 }
 
 Write-Host "`n~~ Running tests ~~`n"

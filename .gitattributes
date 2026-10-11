@@ -1,0 +1,8 @@
+# Normalize line endings in the repository, and let each checkout use its own.
+* text=auto
+
+# The test fixtures are compared byte for byte with what a program writes, and
+# are fed to it verbatim on stdin, so git must never rewrite their line endings.
+# Converting them to CRLF on a Windows checkout makes every comparison fail.
+*.stdout -text
+*.stdin  -text
