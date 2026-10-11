@@ -88,7 +88,7 @@ Releases before 1.14.0 are not covered here. See the
 [#18]: https://github.com/kriol-lang/kriol/pull/18
 [#19]: https://github.com/kriol-lang/kriol/pull/19
 [4d11ab4]: https://github.com/kriol-lang/kriol/commit/4d11ab414aeeec30c60071006d34fea38a44f020
-[1.16.1]: https://github.com/kriol-lang/kriol/compare/v1.16.0-alpha+build2...v1.16.1-alpha+build1
+[1.16.1]: https://github.com/kriol-lang/kriol/compare/v1.16.0-alpha+build2...v1.16.1-alpha+build2
 [1.16.0]: https://github.com/kriol-lang/kriol/compare/v1.15.0-alpha+build1...v1.16.0-alpha+build2
 [1.15.0]: https://github.com/kriol-lang/kriol/compare/v1.14.0-alpha+build1...v1.15.0-alpha+build1
 [1.14.0]: https://github.com/kriol-lang/kriol/compare/v1.13.1-alpha+build1...v1.14.0-alpha+build1

@@ -1,6 +1,6 @@
 # 🦈 KriolLang
 
-**KriolLang** or **Kriol** is a programming language based on the **Cape Verdean Creole**. It was made to be easy for anyone who understands Cape Verdean Creole while keeping the same versatility as some other languages, such as C, Go, and Rust.
+**KriolLang** or **Kriol** is a programming language based on **Cape Verdean Creole**. It was made to be easy for anyone who understands Cape Verdean Creole, while keeping the versatility of the languages its syntax draws on: C, Go and Rust, with Liquid playing a part in the initial design too.
 
 ```kriol
 fn ola(textu nomi, bool na_kriolu) {
@@ -21,7 +21,11 @@ fn inisiu() {
 }
 ```
 
-### Presentation video
+Source files use the `.kriol` or `.kr` extension, and the compiler is called
+`kriol`. The language reference is published at
+[docs.kriol.dev](https://docs.kriol.dev).
+
+## Presentation video
 
 A four-minute video that presents the language:
 
@@ -29,15 +33,7 @@ A four-minute video that presents the language:
   <img src="https://img.youtube.com/vi/dkrlfSyyHy0/maxresdefault.jpg" alt="Kriol: Linguagem di Programason Kabuverdianu, on YouTube" width="640">
 </a>
 
-### Description
-
-The syntax of this programming language was initially based on C, Go, and Rust, but other programming languages such as Liquid played a good role in the initial design.
-
-For more concrete specifications about the language, you are recommended to read the [KriolLang Language Documentation](https://docs.kriol.dev).
-
-The file extension of the KriolLang programming language is `.kriol` or `.kr` and the name of the lang's compiler is **kriol**.
-
-# Install
+## Install
 
 ### Linux
 
@@ -85,7 +81,10 @@ Because `kriol.exe` and `ld.lld.exe` are not signed, running them can fail
 with an error such as *"An Application Control policy has blocked this file"*
 (or *"Uma política de Controlo de Aplicações bloqueou este ficheiro"*), or with
 a SmartScreen *"Windows protected your PC"* prompt. This comes from Windows
-security features, not from kriol. To work around it:
+security features, not from kriol.
+
+<details>
+<summary><b>How to work around it</b></summary>
 
 1. If you downloaded the zip by hand, unblock the files, then try again. Run
    this in the folder you extracted, or on the zip before extracting it:
@@ -123,24 +122,17 @@ security features, not from kriol. To work around it:
 4. On company-managed PCs, the block can come from an IT policy (App Control
    for Business / WDAC). Ask your administrator to allow the files.
 
+</details>
 
 ## Usage
 
-The first thing to do after compiling the compiler is to execute the help command:
-
-```sh
-kriol --help
-```
-
-After executing that command you may see the usage section and some of its options.
-
-An example of how it could be used is to compile one of the example files in the examples folder:
+`kriol --help` lists every option. To compile one of the files in `examples`:
 
 ```sh
 kriol examples/fibonacci_recursive.kriol
 ```
 
-This compiles `fibonacci_recursive.kriol` to a native binary named `a.out` by default. Use `-o` to specify a different output name:
+That produces a native binary named `a.out`. Use `-o` to name it yourself:
 
 ```sh
 kriol examples/fibonacci_recursive.kriol -o fibonacci_recursive
@@ -250,7 +242,7 @@ cmake --install build/release --prefix ~/.local
 The release archives use a flat layout instead (configure with
 `-DCMAKE_INSTALL_BINDIR=. -DCMAKE_INSTALL_DOCDIR=.`).
 
-### Windows (experimental)
+### Building on Windows
 
 `kriol.exe` builds natively on Windows, and the
 [Windows workflow](.github/workflows/windows.yml) publishes it as the
@@ -284,22 +276,39 @@ cmake --build build --target kriol
 
 ## Tests
 
-You can run tests with the following command:
+Run the suite from the repository root:
 
 ```sh
 cmake -B build && cmake --build build --target check
 ```
 
-<!--
-## Visuals
-
-TODO...
+[`tests/README.md`](./tests/README.md) covers the layout of the suite, the
+fixtures, coverage and the fuzzing harnesses. On Windows, the counterpart is
+`.\run_tests.ps1 build\kriol.exe .`
 
 ## Contributing
 
-TODO...
+Bug reports, test cases and pull requests are all welcome, and the language is
+young enough that there is plenty to do. See
+[CONTRIBUTING.md](./CONTRIBUTING.md) for how to build the compiler, run the test
+suite, and what a change is expected to come with.
 
--->
+For anything large, such as new syntax, a new type or a change to an existing
+language rule, please open an issue first so the design can be discussed before
+you spend time on it.
+
+## Contributors
+
+Kriol is written and maintained by
+[@anaximeno](https://github.com/anaximeno), with contributions from everyone
+below.
+
+<a href="https://github.com/kriol-lang/kriol/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=kriol-lang/kriol" alt="Contributors" />
+</a>
+
+<!-- The grid above is generated from the commit history by contrib.rocks and
+     needs no upkeep. Only the maintainer line is written by hand. -->
 
 ## License
 
